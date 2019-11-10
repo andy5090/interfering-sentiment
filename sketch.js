@@ -1,5 +1,16 @@
+let socketRunning = true;
+
+const head = document.getElementsByTagName("head")[0];
+const script = document.createElement("script");
+script.type = "text/javascript";
+script.src = "http://localhost:4000/socket.io/socket.io.js";
+script.onerror = function() {
+  alert("SocketIO Loading Failed");
+  let socketRunning = false;
+};
+head.appendChild(script);
+
 let modelIsReady = false;
-// Create a new Sentiment method
 const sentiment = ml5.sentiment("movieReviews", modelReady);
 
 // When the model is loaded
@@ -9,6 +20,15 @@ function modelReady() {
   modelIsReady = true;
 }
 
+const bookList = [
+  "alicewonder.txt",
+  "dracula.txt",
+  "faust.txt",
+  "mobydick.txt",
+  "frankenstein.txt",
+  "wizrd_oz.txt",
+  "anna_karenina.txt"
+];
 let entireSentences;
 let showingSentences = [];
 
@@ -18,19 +38,12 @@ let basicHue, basicSaturation, basicBrightness;
 
 let socket = null;
 
-function getSocket() {
-  return socket;
-}
-
-function initSocket() {
-  const { events } = window;
-  socket = aSocket;
-  //socket.on(events.getSentimentScore, sendScore);
-}
+let chosenBook;
 
 function preload() {
-  entireSentences = loadStrings("assets/alicewonder.txt");
-  socket = io("http://localhost:4000/");
+  chosenBook = floor(random(0, 6));
+  entireSentences = loadStrings(`assets/${bookList[chosenBook]}`);
+  if (socketRunning) socket = io("http://localhost:4000/");
 }
 
 function setup() {
@@ -82,10 +95,19 @@ function readSentence() {
     const prediction = sentiment.predict(currentSentence);
     const score = prediction.score;
 
-    getSocket().emit("getSentimentScore", score);
+    if (socket !== null) socket.emit("getSentimentScore", score);
 
     showingSentences.push(new Sentence(sentenceIndex, currentSentence, score));
     sentenceIndex++;
+
+    if (entireSentences.length === sentenceIndex) {
+      const doneBook = chosenBook;
+      while (chosenBook !== doneBook) {
+        chosenBook = floor(random(0, 6));
+      }
+      entireSentences = loadStrings(`assets/${bookList[chosenBook]}`);
+      sentenceIndex = 0;
+    }
   }
 }
 
