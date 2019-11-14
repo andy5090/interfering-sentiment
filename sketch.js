@@ -1,9 +1,11 @@
+const serverURL = prompt("Server URL? (without http://)", "localhost:4000");
+
 let socketRunning = true;
 
 const head = document.getElementsByTagName("head")[0];
 const script = document.createElement("script");
 script.type = "text/javascript";
-script.src = "http://localhost:4000/socket.io/socket.io.js";
+script.src = `http://${serverURL}/socket.io/socket.io.js`;
 script.onerror = function() {
   alert("SocketIO Loading Failed");
   let socketRunning = false;
@@ -21,12 +23,12 @@ function modelReady() {
 }
 
 const bookList = [
-  "alicewonder.txt",
+  "alice_in_wonderland.txt",
   "dracula.txt",
   "faust.txt",
   "mobydick.txt",
   "frankenstein.txt",
-  "wizrd_oz.txt",
+  "wizard_of_oz.txt",
   "anna_karenina.txt"
 ];
 let entireSentences;
@@ -41,13 +43,17 @@ let socket = null;
 let chosenBook;
 
 function preload() {
-  chosenBook = floor(random(0, 6));
-  entireSentences = loadStrings(`assets/${bookList[chosenBook]}`);
-  if (socketRunning) socket = io("http://localhost:4000/");
+  chosenBook = bookList[floor(random(0, 6))];
+  console.log(chosenBook);
+  entireSentences = loadStrings(`assets/${chosenBook}`);
+  if (socketRunning) {
+    socket = io(`http://${serverURL}`);
+    socket.emit("fictionName", chosenBook);
+  }
 }
 
 function setup() {
-  createCanvas(windowWidth, windowHeight);
+  createCanvas(displayWidth, displayHeight);
   colorMode(HSB, 255);
   textSize(150);
   textAlign(RIGHT);
@@ -106,6 +112,7 @@ function readSentence() {
         chosenBook = floor(random(0, 6));
       }
       entireSentences = loadStrings(`assets/${bookList[chosenBook]}`);
+      if (socket !== null) socket.emit("fictionName", chosenBook);
       sentenceIndex = 0;
     }
   }
@@ -116,6 +123,11 @@ function draw() {
 
   if (showingSentences.length > 0) {
     showingSentences.map(sentence => {
+      textSize(90);
+      fill(100, 100, 100, 100);
+      if (sentence.originalIndex % 24 > 12)
+        text(sentence.score, width / 2, (sentence.originalIndex % 12) * 90);
+      else text(sentence.score, width, (sentence.originalIndex % 12) * 90);
       if (!sentence.expired) {
         textSize(sentence.fontSize);
         fill(basicHue, sentence.saturation, sentence.brightness);
@@ -125,4 +137,9 @@ function draw() {
     });
     showingSentences = showingSentences.filter(sentence => !sentence.expired);
   }
+}
+
+function mouseClicked() {
+  let fs = fullscreen();
+  fullscreen(!fs);
 }
