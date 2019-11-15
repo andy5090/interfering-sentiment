@@ -124,7 +124,7 @@ function draw() {
   if (showingSentences.length > 0) {
     showingSentences.map(sentence => {
       textSize(90);
-      fill(100, 100, 100, 100);
+      fill(100, 100, 100, 50);
       if (sentence.originalIndex % 24 > 12)
         text(sentence.score, width / 2, (sentence.originalIndex % 12) * 90);
       else text(sentence.score, width, (sentence.originalIndex % 12) * 90);
