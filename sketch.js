@@ -1,4 +1,5 @@
-const serverURL = prompt("Server URL? (without http://)", "localhost:4000");
+// const serverURL = prompt("Server URL? (without http://)", "localhost:4000");
+const serverURL = "192.168.0.32:4000"; //for fixed setting
 
 let socketRunning = true;
 
@@ -42,6 +43,8 @@ let socket = null;
 
 let chosenBook;
 
+let textSizeForHeight = 0;
+
 function preload() {
   chosenBook = bookList[floor(random(0, 6))];
   console.log(chosenBook);
@@ -59,6 +62,8 @@ function setup() {
   textAlign(RIGHT);
 
   sentenceIndex = 0;
+
+  textSizeForHeight = height / 12;
 
   const basicColor = color("#eb3b5a");
   basicHue = hue(basicColor);
@@ -123,11 +128,20 @@ function draw() {
 
   if (showingSentences.length > 0) {
     showingSentences.map(sentence => {
-      textSize(90);
+      textSize(textSizeForHeight);
       fill(100, 100, 100, 50);
       if (sentence.originalIndex % 24 > 12)
-        text(sentence.score, width / 2, (sentence.originalIndex % 12) * 90);
-      else text(sentence.score, width, (sentence.originalIndex % 12) * 90);
+        text(
+          sentence.score,
+          width / 2,
+          (sentence.originalIndex % 12) * textSizeForHeight
+        );
+      else
+        text(
+          sentence.score,
+          width,
+          (sentence.originalIndex % 12) * textSizeForHeight
+        );
       if (!sentence.expired) {
         textSize(sentence.fontSize);
         fill(basicHue, sentence.saturation, sentence.brightness);
