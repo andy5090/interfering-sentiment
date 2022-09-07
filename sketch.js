@@ -1,18 +1,3 @@
-// const serverURL = prompt("Server URL? (without http://)", "localhost:4000");
-const serverURL = "192.168.0.32:4000"; //for fixed setting
-
-let socketRunning = true;
-
-const head = document.getElementsByTagName("head")[0];
-const script = document.createElement("script");
-script.type = "text/javascript";
-script.src = `http://${serverURL}/socket.io/socket.io.js`;
-script.onerror = function() {
-  alert("SocketIO Loading Failed");
-  let socketRunning = false;
-};
-head.appendChild(script);
-
 let modelIsReady = false;
 const sentiment = ml5.sentiment("movieReviews", modelReady);
 
@@ -39,20 +24,13 @@ let sentenceIndex;
 
 let basicHue, basicSaturation, basicBrightness;
 
-let socket = null;
-
-let chosenBook;
-
+let chosenBookId;
 let textSizeForHeight = 0;
 
 function preload() {
-  chosenBook = bookList[floor(random(0, 6))];
-  console.log(chosenBook);
-  entireSentences = loadStrings(`assets/${chosenBook}`);
-  if (socketRunning) {
-    socket = io(`http://${serverURL}`);
-    socket.emit("fictionName", chosenBook);
-  }
+  chosenBookId = floor(random(0, 6));
+  const chosenBookName = bookList[chosenBookId];
+  entireSentences = loadStrings(`assets/${chosenBookName}`);
 }
 
 function setup() {
@@ -78,22 +56,30 @@ class Sentence {
     this.originalIndex = index;
     this.sentence = sentence;
     this.fontSize = floor(random(100, 150));
-    textSize(this.fontSize);
-    const sentenceLength = textWidth(sentence);
     this.score = score;
     this.saturation = floor(basicSaturation * score);
     this.brightness = floor(
       basicBrightness - (basicSaturation - this.saturation)
     );
+    const sentenceLength = textWidth(sentence);
     this.posX = width + sentenceLength;
     this.posY = floor(random(100, height));
     this.expired = false;
+    this.osc = new p5.Oscillator(floor(score * 1000), "sine");
+    this.isPlaying = false;
+  }
+
+  soundStart() {
+    this.osc.amp(0.05);
+    this.osc.start();
+    this.isPlaying = true;
   }
 
   decreasePosX() {
     if (this.posX > 0) {
       this.posX -= 5;
     } else {
+      this.osc.stop();
       this.expired = true;
     }
   }
@@ -106,18 +92,16 @@ function readSentence() {
     const prediction = sentiment.predict(currentSentence);
     const score = prediction.score;
 
-    if (socket !== null) socket.emit("getSentimentScore", score);
-
     showingSentences.push(new Sentence(sentenceIndex, currentSentence, score));
     sentenceIndex++;
 
     if (entireSentences.length === sentenceIndex) {
-      const doneBook = chosenBook;
-      while (chosenBook !== doneBook) {
-        chosenBook = floor(random(0, 6));
+      const doneBookId = chosenBookId;
+      while (chosenBookId !== doneBookId) {
+        chosenBookId = floor(random(0, 6));
       }
-      entireSentences = loadStrings(`assets/${bookList[chosenBook]}`);
-      if (socket !== null) socket.emit("fictionName", chosenBook);
+      const chosenBookName = bookList[chosenBookId];
+      entireSentences = loadStrings(`assets/${chosenBookName}`);
       sentenceIndex = 0;
     }
   }
@@ -142,7 +126,12 @@ function draw() {
           width,
           (sentence.originalIndex % 12) * textSizeForHeight
         );
+
       if (!sentence.expired) {
+        if (!sentence.isPlaying) {
+          sentence.soundStart();
+        }
+
         textSize(sentence.fontSize);
         fill(basicHue, sentence.saturation, sentence.brightness);
         text(sentence.sentence, sentence.posX, sentence.posY);
